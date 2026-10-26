@@ -73,7 +73,9 @@
     margin:0 auto 30px;max-width:32ch}
 
   .choices{display:flex;align-items:center;justify-content:center;
-    gap:16px;min-height:112px;flex-wrap:nowrap}
+    gap:16px;min-height:120px;flex-wrap:nowrap}
+  /* on a phone the No button parks under Yes, so leave it room */
+  @media (max-width:560px){ .choices{min-height:184px} }
 
   button{
     font-family:var(--body);font-size:.99rem;font-weight:600;
@@ -545,8 +547,20 @@
   /* park the No button in its "innocent" spot, just right of Yes */
   function park(){
     var gr = gate.getBoundingClientRect(), yr = yes.getBoundingClientRect();
-    no.style.left = (yr.right - gr.left + 16) + 'px';
-    no.style.top  = (yr.top   - gr.top + (yr.height - no.offsetHeight)/2) + 'px';
+    var w = no.offsetWidth, h = no.offsetHeight, pad = 12;
+    if(!w) return;
+
+    var left = yr.right - gr.left + 16;
+    var top  = yr.top   - gr.top + (yr.height - h)/2;
+
+    /* narrow screen: no room beside Yes, so sit underneath it instead */
+    if(left + w + pad > gr.width){
+      left = (gr.width - w)/2;
+      top  = yr.bottom - gr.top + 16;
+    }
+
+    no.style.left = Math.max(pad, Math.min(left, gr.width  - w - pad)) + 'px';
+    no.style.top  = Math.max(pad, Math.min(top,  gr.height - h - pad)) + 'px';
   }
 
   /* …and make it bolt the moment she goes near it */
@@ -564,12 +578,14 @@
     var cx = yr.left - gr.left + yr.width/2;
     var cy = yr.top  - gr.top  + yr.height/2;
 
+    /* keep clear of Yes — but a phone screen can't spare 120px, so scale it */
+    var clear = Math.min(120, gr.width * 0.34);
     var x, y, tries = 0;
     do {
       x = pad + Math.random()*(maxX - pad);
       y = pad + Math.random()*(maxY - pad);
       tries++;
-    } while (tries < 14 && Math.hypot(x + w/2 - cx, y + h/2 - cy) < 120);
+    } while (tries < 20 && Math.hypot(x + w/2 - cx, y + h/2 - cy) < clear);
 
     no.style.left = x + 'px';
     no.style.top  = y + 'px';
@@ -588,6 +604,8 @@
   }
 
   window.addEventListener('resize', function(){ if(!clicks) park(); });
+  window.addEventListener('orientationchange', function(){ if(!clicks) setTimeout(park,250); });
+  window.addEventListener('load', function(){ if(!clicks) park(); });
 
   no.addEventListener('mouseenter', flee);
   no.addEventListener('focus', flee);
